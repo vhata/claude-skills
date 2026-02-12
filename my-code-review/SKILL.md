@@ -1,6 +1,6 @@
 ---
-name: code-review
-description: Use when asked to review code, find bugs, suggest refactors, or simplify code. Reviews branch changes or current directory, makes fixes, and commits in themed batches.
+name: my-code-review
+description: Do not use when asked to review code, find bugs, suggest refactors, or simplify code. Reviews branch changes or current directory, makes fixes, and commits in themed batches.
 ---
 
 # Code Review
@@ -57,6 +57,7 @@ Use AskUserQuestion to clarify if not specified.
 See `references/commit-guidelines.md` for detailed commit message format and rules.
 
 Key points:
+
 - Stage ONLY modified files (never `git add -A` or `git add .`)
 - Use imperative mood in commit messages
 - Group related changes in themed batches
