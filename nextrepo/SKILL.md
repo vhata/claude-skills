@@ -69,6 +69,7 @@ Create this structure in the current directory:
 ├── biome.json
 ├── CHANGELOG.md
 ├── LICENSE
+├── Makefile
 ├── next.config.ts
 ├── package.json
 ├── postcss.config.mjs
@@ -112,7 +113,7 @@ Examples of good commit messages:
 - `Implement server-side data fetching for blog posts` (not just "add blog")
 
 ### What to Commit
-- Always run `pnpm format` and `pnpm check` before committing
+- Always run `make format` and `make check` before committing
 - Ensure all tests pass
 - Ensure type checking passes
 - Ensure the build succeeds
@@ -190,7 +191,7 @@ Example:
 - Write tests for components and utilities
 - Test both server and client components appropriately
 - Aim for >80% code coverage
-- Run `pnpm test` before committing
+- Run `make test` before committing
 
 ## Code Style
 - Use TypeScript strict mode (enforced)
@@ -201,11 +202,11 @@ Example:
 
 ## Review Before Committing
 Before each commit, verify:
-1. [ ] Code is formatted (`pnpm format`)
-2. [ ] Linting passes (`pnpm lint`)
-3. [ ] Type checking passes (`pnpm type-check`)
-4. [ ] Tests pass (`pnpm test`)
-5. [ ] Build succeeds (`pnpm build`)
+1. [ ] Code is formatted (`make format`)
+2. [ ] Linting passes (`make lint`)
+3. [ ] Type checking passes (`make type-check`)
+4. [ ] Tests pass (`make test`)
+5. [ ] Build succeeds (`make build`)
 6. [ ] CHANGELOG.md updated if appropriate
 7. [ ] Commit message is descriptive
 ```
@@ -335,13 +336,13 @@ A modern full-stack web application built with:
 
 ```bash
 # Install dependencies
-pnpm install
+make install
 
 # Start development server
-pnpm dev
+make dev
 
 # Run checks
-pnpm check
+make check
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
@@ -351,15 +352,17 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ### Common Commands
 
 ```bash
-pnpm dev           # Start dev server (http://localhost:3000)
-pnpm build         # Build for production
-pnpm start         # Start production server
-pnpm test          # Run tests
-pnpm test:watch    # Run tests in watch mode
-pnpm lint          # Run Biome linter
-pnpm format        # Format code with Biome
-pnpm type-check    # Type check with TypeScript
-pnpm check         # Run all checks (CI equivalent)
+make install       # Install dependencies
+make dev           # Start dev server (http://localhost:3000)
+make build         # Build for production
+make start         # Start production server
+make test          # Run tests
+make test-watch    # Run tests in watch mode
+make lint          # Run Biome linter
+make format        # Format code with Biome
+make type-check    # Type check with TypeScript
+make check         # Run all checks (CI equivalent)
+make help          # Show all available targets
 ```
 
 ### Project Structure
@@ -386,23 +389,23 @@ Next.js 15 uses Server Components by default:
 
 ```bash
 # Run all tests
-pnpm test
+make test
 
 # Run tests in watch mode
-pnpm test:watch
+make test-watch
 
 # Generate coverage report
-pnpm test:coverage
+make test-coverage
 ```
 
 ## Building for Production
 
 ```bash
 # Build the project
-pnpm build
+make build
 
 # Run the production build locally
-pnpm start
+make start
 ```
 
 ## Environment Variables
@@ -480,6 +483,58 @@ Replace {PROJECT_NAME}, {PACKAGE_NAME}, and {NODE_VERSION}:
     "vitest": "^2.1.8"
   }
 }
+```
+
+### Makefile
+```makefile
+.PHONY: help install dev build start test test-watch test-coverage lint format type-check check
+
+help:
+	@echo "Available targets:"
+	@echo "  install       - Install dependencies"
+	@echo "  dev           - Start dev server"
+	@echo "  build         - Build for production"
+	@echo "  start         - Start production server"
+	@echo "  test          - Run tests"
+	@echo "  test-watch    - Run tests in watch mode"
+	@echo "  test-coverage - Run tests with coverage"
+	@echo "  lint          - Run Biome linter"
+	@echo "  format        - Format code with Biome"
+	@echo "  type-check    - Type check with TypeScript"
+	@echo "  check         - Run all checks (lint, type-check, test, build)"
+
+install:
+	pnpm install
+
+dev:
+	pnpm dev
+
+build:
+	pnpm build
+
+start:
+	pnpm start
+
+test:
+	pnpm test
+
+test-watch:
+	pnpm test:watch
+
+test-coverage:
+	pnpm test:coverage
+
+lint:
+	pnpm lint
+
+format:
+	pnpm format
+
+type-check:
+	pnpm type-check
+
+check:
+	pnpm check
 ```
 
 ### tsconfig.json
@@ -908,7 +963,7 @@ Execute these commands:
 Run the full check suite to ensure everything works:
 
 ```bash
-pnpm check
+make check
 ```
 
 This runs:
@@ -919,7 +974,7 @@ This runs:
 
 Also verify the dev server starts:
 ```bash
-pnpm dev
+make dev
 ```
 
 Should start at http://localhost:3000
@@ -949,9 +1004,10 @@ Display:
 - Commands that were run
 - Next steps:
   - Review `.claude/CLAUDE.md` for project-specific Claude Code guidelines
-  - `pnpm dev` - Start development server at http://localhost:3000
-  - `pnpm test:watch` - Run tests in watch mode
-  - `pnpm check` - Run all checks
+  - `make dev` - Start development server at http://localhost:3000
+  - `make test-watch` - Run tests in watch mode
+  - `make check` - Run all checks
+  - `make help` - See all available commands
   - Start building in `src/app/`
 
 Note: The `.claude/CLAUDE.md` file contains instructions for Claude Code about:
