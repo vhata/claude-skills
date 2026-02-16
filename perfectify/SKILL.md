@@ -1,11 +1,11 @@
 ---
 name: perfectify
-description: Systematically analyze and improve any repository toward production-quality perfection. Audits architecture, testing, security, developer experience, and code quality, then executes improvements in the correct order. Works for any project type — libraries, CLIs, APIs, web apps, data pipelines, GUIs, or anything else.
+description: Systematically analyze and improve any repository toward production-quality perfection. Audits architecture, testing, security, error handling, developer experience, and code quality, then executes improvements in the correct order. Works for any project type — libraries, CLIs, APIs, web apps, data pipelines, GUIs, or anything else.
 ---
 
 # Perfectify
 
-Systematically transform any existing repository into a production-quality exemplar. This skill applies universal software engineering principles — clean architecture, comprehensive testing, defensive coding, developer experience — adapted to whatever kind of project it finds.
+Systematically transform any existing repository into a production-quality exemplar. This skill applies universal software engineering principles — clean architecture, comprehensive testing, security, error handling, developer experience — adapted to whatever kind of project it finds.
 
 ## When to Use This Skill
 
@@ -153,7 +153,7 @@ Git Discipline:   [A/B/C/D/F] — ...
 [Type-specific]:  [A/B/C/D/F] — ... (e.g., "API Design", "CLI UX", "Accessibility")
 ```
 
-Then ask the user which phases to proceed with and what priority order they prefer.
+Based on the grades, **recommend which phases would have the highest impact** and suggest a priority order. Then ask the user which phases to proceed with — they may have different priorities.
 
 ---
 
@@ -173,6 +173,8 @@ Every project has domain logic that is independent of how it's delivered:
 | **Web App** | Same as API + any client-side state logic, minus rendering/DOM |
 | **GUI App** | Game/app logic, state transitions — minus window toolkit |
 | **Data Pipeline** | Transform logic, validation rules — minus I/O connectors |
+| **Infra/Config** | Validation logic, config generation/templating — minus cloud API calls |
+| **Monorepo** | Apply per sub-project — each has its own pure core |
 
 ### 2.2 Extract the Core
 
@@ -183,7 +185,7 @@ Refactor so the core module(s):
 - Expose **pure functions** that take inputs and return outputs without side effects
 - Can be imported and called from a test file with no setup, no running server, no database
 
-**Why immutability matters (for any project):** Immutable state + pure functions means no hidden side effects, trivial unit testing, easy snapshotting/undo, safe concurrency, and simple serialization. This isn't just for games — it applies equally to API request processing, data pipeline transforms, CLI operations, and library functions.
+**Why immutability matters:** Immutable state + pure functions means no hidden side effects, trivial unit testing, easy snapshotting/undo, safe concurrency, and simple serialization. This applies to any project — API request processing, data pipeline transforms, CLI operations, library functions.
 
 ### 2.3 Push I/O to the Edges
 
@@ -234,7 +236,7 @@ Write tests as an executable specification of the system's behavior.
 
 ### 3.1 Test Organization
 
-Group tests by behavioral topic, not by implementation detail:
+Group tests by behavioral topic, not by implementation detail. (Examples below use Python syntax — adapt to the project's language and test framework.)
 
 ```
 # Good: tests describe WHAT the system does
@@ -522,6 +524,16 @@ Apply the relevant checklist(s) based on the project classification from Phase 1
 - [ ] `aria-live` regions for dynamic status updates
 - [ ] Works without JavaScript for core functionality (progressive enhancement) where feasible
 
+#### For GUI Applications (native)
+
+- [ ] All logic separated from the window toolkit (pure core testable headlessly)
+- [ ] Keyboard shortcuts for all primary actions, documented in a help overlay or menu
+- [ ] Responsive to window resizing without layout breakage
+- [ ] Accessible labels on interactive elements (for screen readers where the toolkit supports it)
+- [ ] Color not used as the sole indicator of state — pair with text, icons, or borders
+- [ ] Graceful handling of missing assets or failed resource loading
+- [ ] No blocking I/O on the main/UI thread
+
 #### For Data Pipelines
 
 - [ ] Idempotent operations — running twice produces the same result
@@ -539,6 +551,14 @@ Apply the relevant checklist(s) based on the project classification from Phase 1
 - [ ] Secrets managed through variables, not hardcoded
 - [ ] Rollback strategy documented
 - [ ] Environment-specific configuration separated from shared config
+
+#### For Monorepos
+
+- [ ] Each sub-project can be built and tested independently
+- [ ] Shared dependencies are managed consistently (workspace, shared lockfile, etc.)
+- [ ] CI runs only affected sub-projects on change (not the entire repo every time)
+- [ ] Clear ownership boundaries — each sub-project has its own README and CLAUDE.md
+- [ ] Apply the relevant type-specific checklist to each sub-project individually
 
 ---
 
@@ -559,7 +579,7 @@ Before declaring a codebase "perfect," verify all of these:
 - [ ] Tests organized by behavioral topic with descriptive names
 - [ ] Positive and negative test pairs for every behavior
 - [ ] Helper functions for test data construction (not hidden fixtures)
-- [ ] Fast/slow split — `make test` completes in seconds
+- [ ] Fast/slow split — fast tests complete in seconds
 - [ ] Integration tests exercise module boundaries
 - [ ] All tests pass, coverage threshold enforced in CI
 
