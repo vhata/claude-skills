@@ -78,7 +78,12 @@ If multiple markers exist (e.g. polyglot repo), ask the user which language is p
 
 ### Questions to ask the user
 
-Use AskUserQuestion. **AskUserQuestion is capped at 4 questions per call** — split into two or three batches as needed. Do not write any files until all batches are answered; content placeholders are substituted at write-time.
+Two question types, asked through different mechanisms:
+
+- **Multi-choice questions** (mode, branching model, release tags, e2e, license, strict mypy) — use **AskUserQuestion**. These have a small fixed set of valid answers, so the user picks from a list. AskUserQuestion is capped at 4 questions per call; split into batches.
+- **Free-form questions** (project tagline, first release name + goal, author name override) — ask as **plain text in chat**, one at a time. **Do not shoehorn these into AskUserQuestion** — coercing a tagline question into a multi-choice ("Is this a CLI? A library? A web service?") is worse than asking nothing, because the canned options bias the user away from their actual answer. Ask `"What's the tagline for {PROJECT_NAME}? One short sentence."` and let the user type.
+
+Do not write any files until all questions are answered; content placeholders are substituted at write-time.
 
 **Batch 1 — workflow (always 4 questions):**
 
@@ -99,14 +104,19 @@ Use AskUserQuestion. **AskUserQuestion is capped at 4 questions per call** — s
 
 Skip this batch entirely if no language-specific question applies.
 
-**Batch 3 — project content (always at least 3 questions):**
+**Batch 3 — project content:**
 
 The contract's first commit ships with the user's actual words, not boilerplate. Ask for content; substitute at write-time. Do not write `(To be filled in.)` or generic prose anywhere a real answer is reachable.
 
-5. **Project tagline** — one short sentence describing what this project is and who it's for. Goes into `README.md` first paragraph, `CLAUDE.md` project description, and the start of `SPEC.md` Overview. Required. If the user genuinely can't articulate it yet, prompt for three-or-four-word framing ("a CLI for X", "a library that does Y") rather than letting them defer.
-6. **License** — default `MIT`. Other common options: `Apache-2.0`, `BSD-3-Clause`, `proprietary`, `unlicensed`. The skill **writes a `LICENSE` file** in Phase 2 with the canonical text for the chosen license (substituting author name + year). For `proprietary` / `unlicensed` / unknown, write a short stub `LICENSE` describing the choice.
-7. **Author name** — for the LICENSE copyright line. Default to `git config user.name`; allow override.
-8. (If release tags = yes:) **First release name and one-line goal** — `r0-{name}` and goal. Goes into `ACCEPTANCE.md` and `FEATURES.md` as the first release section. Default `r0-bootstrap` / "the project boots and the contract is in place" if the user has nothing.
+License (multi-choice, AskUserQuestion):
+
+5. **License** — options: `MIT` (default), `Apache-2.0`, `BSD-3-Clause`, `proprietary`, `unlicensed`. The skill **writes a `LICENSE` file** in Phase 2 with the canonical text for the chosen license (substituting author name + year). For `proprietary` / `unlicensed`, write a short stub `LICENSE` describing the choice.
+
+Free-form prompts in chat (one at a time, plain text — **NOT** AskUserQuestion):
+
+6. **Project tagline** — ask: `"What's the tagline for {PROJECT_NAME}? One short sentence describing what it is and who it's for."` Take the user's reply verbatim. **Do not** convert this into a multi-choice with canned categories ("Is it a CLI? A library? A web service?") — the canned options bias the user away from their actual answer. If the user genuinely deflects ("I don't know yet"), prompt once more for three-or-four words ("just give me a rough framing — `a CLI for X` or `a library that does Y`"); accept whatever they say. Going forward without a tagline is the failure mode.
+7. **Author name** — ask: `"Author name for the LICENSE copyright line? Default: {git config user.name}."` Take the reply, or use the default if the user just hits enter / says "use default".
+8. (If release tags = yes:) **First release name and goal** — ask in chat: `"What should release 0 be called, and what's its goal? Format: 'r0-name: one-line goal.' Default: 'r0-bootstrap: the project boots and the contract is in place.'"` Parse the user's reply or use the default.
 
 Sections that genuinely cannot be answered before architecture takes shape (`SPEC.md` Functionality, `ARCHITECTURE.md` Components, `ARCHITECTURE.md` Disciplines, etc.) are written as section headings followed by an HTML comment explaining what to put there. The rendered markdown shows clean section headings — no visible "fill in" prose.
 
