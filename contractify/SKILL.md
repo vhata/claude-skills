@@ -32,9 +32,10 @@ Determine mode, language, package manager, and git state. Ask the user what cann
 
 ```
 if .git/ does not exist:
-  Ask the user: "No git repository here. Run `git init -b main` and proceed?"
-  yes → run `git init -b main`, mode = initialize, continue
-  no  → ERROR: this skill operates on a git repository. Aborting.
+  AUTO-INIT: run `git init -b main` immediately. Print: "no git repo here —
+    initialised with `git init -b main`."
+  mode = initialize
+  continue.
 elif working tree dirty (`git status --porcelain` non-empty):
   ERROR: working tree must be clean. Stash or commit changes, then re-run.
 elif current branch is not main/master:
@@ -45,7 +46,7 @@ else:
   mode = modernize
 ```
 
-The empty-directory case is the most common starting point for greenfield projects, so the auto-init prompt is the right default rather than a hard error. Only abort if the user explicitly says no.
+The empty-directory case is the most common starting point for greenfield projects. The user invoked `/contractify`, which means they want a contract-shaped repo — asking permission to run `git init` is friction that buys nothing. Auto-init and announce; the user can object during the Phase 0 question batches that follow if they meant to be elsewhere.
 
 ### Language detection
 
@@ -93,7 +94,7 @@ Do not write any files until all questions are answered; content placeholders ar
 The first slot is conditional on whether the language was auto-detected.
 
 - **If language was auto-detected** (Phase 0 found a marker file): slot 1 is **mode confirmation** — show what was auto-detected (mode, language, package manager) and ask for confirmation. Allow override.
-- **If language is unknown** (no marker files, e.g. fresh empty directory): slot 1 is **language selection** — ask which of `TypeScript`, `Python`, `Rust`, `Go`, or `unknown` (will write a stub Makefile) the project will use. There is no auto-detected mode/language to confirm; defer mode confirmation to the implicit "are these the correct settings?" review at the end of Batch 1.
+- **If language is unknown** (no marker files, e.g. fresh empty directory): slot 1 is **language selection** with four options: `TypeScript`, `Python`, `Rust`, `Go`. AskUserQuestion auto-injects "Other" as a fifth choice, which the user picks for any other language and which routes to the Unknown / stub-Makefile path. Do **not** include "Unknown" as an explicit fifth option — the tool caps at four and AskUserQuestion will reject the call. There is no auto-detected mode/language to confirm; defer mode confirmation to the implicit "are these the correct settings?" review at the end of Batch 1.
 
 The remaining three slots are unconditional:
 
@@ -119,7 +120,9 @@ The contract's first commit ships with the user's actual words, not boilerplate.
 
 License (multi-choice, AskUserQuestion):
 
-5. **License** — options: `MIT` (default), `Apache-2.0`, `BSD-3-Clause`, `proprietary`, `unlicensed`. The skill **writes a `LICENSE` file** in Phase 2 with the canonical text for the chosen license (substituting author name + year). For `proprietary` / `unlicensed`, write a short stub `LICENSE` describing the choice.
+5. **License** — four options visible (capped by AskUserQuestion): `MIT` (default, recommended first), `Apache-2.0`, `GPL-3.0`, `BSD-3-Clause`. AskUserQuestion auto-injects "Other" as a fifth choice; user picks Other for `LGPL-3.0`, `MPL-2.0`, `proprietary`, `unlicensed`, or any other license, then types the SPDX identifier as free text.
+
+The skill **writes a `LICENSE` file** in Phase 2 with the canonical text for the chosen license. For canonical OSI licenses (the four picklist options plus `LGPL-3.0` and `MPL-2.0`), the skill knows the standard text and substitutes `{YEAR}` and `{AUTHOR_NAME}` directly. For other or unfamiliar SPDX identifiers, **try `WebFetch` against `https://opensource.org/license/{spdx-id}` (or `https://www.gnu.org/licenses/` for GNU licenses) first to retrieve the canonical text**; only fall back to a stub `LICENSE` (containing `SPDX-License-Identifier: {ID}` plus the copyright line) if the fetch fails. For `proprietary`, write the one-paragraph "all rights reserved" stub. For `unlicensed`, write the contact-the-author stub. The stub paths are last resorts, not the default — canonical text always wins when reachable.
 
 Free-form prompts in chat (one at a time, plain text — **NOT** AskUserQuestion):
 
@@ -642,14 +645,21 @@ Two known failure modes when writing this Makefile:
 1. **Markdown rendering can collapse `$$...$$` as LaTeX math.** If you read the template and see `$, $` (the digits eaten), you're reading a math-flavoured render. The intended characters are `$$1` and `$$2`.
 2. **Auto-correction.** Don't "fix" `$$1` to `$1` — that breaks `make help`.
 
-After Phase 3 writes the Makefile, verify both:
+After Phase 3 writes the Makefile, run **two separate** verification commands (do not chain with `&&` — the second one is a "must not match" check whose nonzero exit is the success path, and chaining trips up `set -e`):
+
+Step 1 — must succeed (grep finds doubled dollars):
 
 ```sh
-grep -E '\$\$[12]' Makefile          # must match — confirms doubled-dollars present
-grep -E '[^$]\$[12]' Makefile        # must NOT match — would mean a single-$ slipped through
+grep -E '\$\$[12]' Makefile
 ```
 
-If the second grep finds anything inside the awk line, fix it before committing. The verification commands are also embedded in the post-write check below; do not skip them.
+Step 2 — must "fail" (no match — meaning no single-`$` digit-references slipped through):
+
+```sh
+grep -E '[^$]\$[12]' Makefile
+```
+
+If step 1 prints nothing, the doubled dollars are missing and `make help` will produce garbage; rewrite. If step 2 prints any line inside the awk range, a single-dollar slipped through; rewrite. Run both before committing Phase 3.
 
 In Phase 3 we declare only `.PHONY: help`. The full `.PHONY` list is added in Phase 4 alongside the actual target rules — declaring phony targets without rules in Phase 3 leaves the Makefile in a transient broken state where `make install` between commits 3 and 4 fails with "No rule to make target", which violates "always green on main."
 
