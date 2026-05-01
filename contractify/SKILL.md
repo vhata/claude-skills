@@ -32,8 +32,9 @@ Determine mode, language, package manager, and git state. Ask the user what cann
 
 ```
 if .git/ does not exist:
-  ERROR: this skill operates on a git repository.
-  Suggest: `git init -b main` (older Git defaults to `master`).
+  Ask the user: "No git repository here. Run `git init -b main` and proceed?"
+  yes → run `git init -b main`, mode = initialize, continue
+  no  → ERROR: this skill operates on a git repository. Aborting.
 elif working tree dirty (`git status --porcelain` non-empty):
   ERROR: working tree must be clean. Stash or commit changes, then re-run.
 elif current branch is not main/master:
@@ -43,6 +44,8 @@ elif no living docs and no Makefile present:
 else:
   mode = modernize
 ```
+
+The empty-directory case is the most common starting point for greenfield projects, so the auto-init prompt is the right default rather than a hard error. Only abort if the user explicitly says no.
 
 ### Language detection
 
@@ -85,9 +88,15 @@ Two question types, asked through different mechanisms:
 
 Do not write any files until all questions are answered; content placeholders are substituted at write-time.
 
-**Batch 1 — workflow (always 4 questions):**
+**Batch 1 — workflow (4 questions):**
 
-1. **Mode confirmation** — show what was auto-detected (mode, language, package manager) and ask for confirmation. Allow override.
+The first slot is conditional on whether the language was auto-detected.
+
+- **If language was auto-detected** (Phase 0 found a marker file): slot 1 is **mode confirmation** — show what was auto-detected (mode, language, package manager) and ask for confirmation. Allow override.
+- **If language is unknown** (no marker files, e.g. fresh empty directory): slot 1 is **language selection** — ask which of `TypeScript`, `Python`, `Rust`, `Go`, or `unknown` (will write a stub Makefile) the project will use. There is no auto-detected mode/language to confirm; defer mode confirmation to the implicit "are these the correct settings?" review at the end of Batch 1.
+
+The remaining three slots are unconditional:
+
 2. **Other human contributors on this repo?** — *Just me + Claude* (solo) → keep PROCESS.md's "Parallel work via worktree agents" section, since worktree-agent parallelism is a Claude-specific workflow that fits a solo dev. *Other humans on the team* → strip the worktree section and reword PROCESS.md's "Repository shape" section to mention pull-request-based workflow rather than direct-to-main. The phrasing matters: this question is about whether other humans contribute, not about whether Claude works alone.
 3. **Release tags?** — yes → ACCEPTANCE.md gets per-release section template; CLAUDE.md gets the "release tags require explicit sign-off" seed pattern. No → ACCEPTANCE.md becomes a one-line placeholder; the release-tags pattern is omitted from CLAUDE.md.
 4. **End-to-end tests in scope?** — yes → wire `make e2e` to the *language-appropriate* e2e tool (see below). No → `make e2e` becomes `@echo "no e2e tests configured"`. The wiring is language-specific; do **not** offer Playwright for non-TypeScript projects.
@@ -130,6 +139,7 @@ Display the planned phase list and per-phase commits before beginning Phase 1. L
 | `{PROJECT_TAGLINE}` | Batch 3, question 5 |
 | `{LANGUAGE}` | detected in Phase 0 |
 | `{PACKAGE_MANAGER}` | detected in Phase 0 (e.g. `pnpm`, `uv`, `cargo`, `go modules`) |
+| `{PACKAGE_NAME}` | (Python only) `{PROJECT_NAME}` with hyphens replaced by underscores — Python identifier rules |
 | `{LICENSE}` | Batch 3, question 6 (default `MIT`) |
 | `{AUTHOR_NAME}` | Batch 3, question 7 (default `git config user.name`) |
 | `{YEAR}` | current year |
@@ -625,7 +635,21 @@ The Makefile has a common header (help target, default goal) plus a language-spe
 
 ### Common header (always)
 
-**Critical — the awk line uses doubled `$$1` / `$$2`.** Make consumes a single `$` as the start of a variable expansion, so the source must have `$$` for awk to see `$1` / `$2` at runtime. When writing this Makefile, copy the doubled dollar signs verbatim. **Do not "correct" `$$1` to `$1` — that breaks `make help`.** After Phase 3 writes the Makefile, verify with `grep -E '\$\$[12]' Makefile` (must match) and `grep -E "printf.*\\\$[^\\\$]" Makefile | grep -v '\\\$\\\$'` (must not match).
+**Critical — the awk line uses doubled dollar signs.** The two characters in the printf are: `$` `$` `1` (four chars total: two literal dollar signs followed by the digit one), and `$` `$` `2` (same idea). In the rendered Makefile this looks like `printf "...", $$1, $$2`. Make consumes a single `$` as the start of a variable expansion, so the source must have *two* dollars per occurrence to pass `$1` and `$2` through to awk at runtime.
+
+Two known failure modes when writing this Makefile:
+
+1. **Markdown rendering can collapse `$$...$$` as LaTeX math.** If you read the template and see `$, $` (the digits eaten), you're reading a math-flavoured render. The intended characters are `$$1` and `$$2`.
+2. **Auto-correction.** Don't "fix" `$$1` to `$1` — that breaks `make help`.
+
+After Phase 3 writes the Makefile, verify both:
+
+```sh
+grep -E '\$\$[12]' Makefile          # must match — confirms doubled-dollars present
+grep -E '[^$]\$[12]' Makefile        # must NOT match — would mean a single-$ slipped through
+```
+
+If the second grep finds anything inside the awk line, fix it before committing. The verification commands are also embedded in the post-write check below; do not skip them.
 
 In Phase 3 we declare only `.PHONY: help`. The full `.PHONY` list is added in Phase 4 alongside the actual target rules — declaring phony targets without rules in Phase 3 leaves the Makefile in a transient broken state where `make install` between commits 3 and 4 fails with "No rule to make target", which violates "always green on main."
 
@@ -1120,7 +1144,7 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: uv run mypy
+        entry: uv run mypy .
         language: system
         types: [python]
         pass_filenames: false
@@ -1133,7 +1157,9 @@ repos:
         always_run: true
 ```
 
-For pip projects, replace `uv run mypy` / `uv run pytest` with `mypy` / `pytest` (assumes the user is in an active virtualenv).
+For pip projects, replace `uv run mypy .` / `uv run pytest` with `mypy .` / `pytest` (assumes the user is in an active virtualenv).
+
+**Critical:** the mypy `entry` must end with `.` (or some path target). With `pass_filenames: false` and `always_run: true`, the hook never gets file arguments injected — so without an explicit target, mypy crashes with "Missing target module, package, files, or command." The dot tells mypy to check the whole project.
 
 The mypy hook uses `language: system` rather than the `mirrors-mypy` repo because mirrors-mypy with `additional_dependencies: []` cannot see the project's installed packages — strict mypy on test files needs to import pytest, the package being tested, etc., and only the local environment has them. `language: system` runs mypy from the project's environment and gets all dependencies for free.
 
@@ -1370,6 +1396,21 @@ Does the change use the project's vocabulary (from `SPEC.md` / `ARCHITECTURE.md`
 ### F. Process disciplines
 
 Is the diff a clean rebase (no merge commits)? Is formatting separated from feature commits? Will `make check` pass?
+
+<!--
+  HOW TO FLESH THIS OUT:
+
+  When ARCHITECTURE.md grows real architectural disciplines (rules like "no Math.random in
+  the simulation core", "no host APIs imported from the sim layer", "all timestamps are
+  integer ticks"), revisit this file. For each discipline:
+
+  1. Add a new heading under §3 with the discipline's name.
+  2. Write one-line description of what the diff should be checked for.
+  3. List the specific code patterns or imports that constitute a violation.
+
+  Until the architecture has at least three real disciplines, keep using the generic
+  categories (A-F) above. The skill is reports-only at every stage; no auto-fixing.
+-->
 
 <!-- Add further project-specific categories as patterns emerge. -->
 
