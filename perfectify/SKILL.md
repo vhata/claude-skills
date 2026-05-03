@@ -1,11 +1,11 @@
 ---
 name: perfectify
-description: Systematically analyze and improve any repository toward production-quality perfection. Audits architecture, testing, security, error handling, developer experience, and code quality, then executes improvements in the correct order. Works for any project type — libraries, CLIs, APIs, web apps, data pipelines, GUIs, or anything else.
+description: Systematically analyze and improve any repository toward production-fit quality. Audits architecture, testing, security, error handling, developer experience, and code quality, then executes targeted improvements scaled to what the project actually needs. Works for any project type — libraries, CLIs, APIs, web apps, data pipelines, GUIs, or anything else.
 ---
 
 # Perfectify
 
-Systematically transform any existing repository into a production-quality exemplar. This skill applies universal software engineering principles — clean architecture, comprehensive testing, security, error handling, developer experience — adapted to whatever kind of project it finds.
+Systematically improve any existing repository toward production-fit quality. This skill applies universal software engineering principles — clean architecture, comprehensive testing, security, error handling, developer experience — adapted to whatever kind of project it finds, and scaled to what the project actually needs.
 
 ## When to Use This Skill
 
@@ -13,9 +13,15 @@ Systematically transform any existing repository into a production-quality exemp
 - User asks to audit and systematically improve a codebase
 - User invokes `/perfectify`
 
-## Philosophy: What Makes Software "Perfect"
+## Philosophy: Production-Fit, Not Perfect
 
-Perfect software isn't about adding features — it's about getting every dimension right simultaneously. The eight universal pillars are:
+"Perfect" is the wrong gate. The right gate is: **match rigor to who depends on this and what breaks when it fails.** A library shipping to thousands needs different rigor than a side project nobody else touches. A 200-line glue script doesn't need hexagonal architecture; a public API does.
+
+Before each phase, ask:
+
+> **Cost gate:** *What does NOT doing this phase actually cost you?* If the honest answer is "nothing," skip it.
+
+The eight pillars below are dimensions to *consider*, not boxes to *tick*. Aim for production-fit, not maximalist polish. The eight universal pillars are:
 
 1. **Architecture** — Clean separation of concerns, dependencies point inward, pure testable core
 2. **Testing** — Tests as executable specification, comprehensive coverage, fast feedback
@@ -155,9 +161,33 @@ Git Discipline:   [A/B/C/D/F] — ...
 
 Based on the grades, **recommend which phases would have the highest impact** and suggest a priority order. Then ask the user which phases to proceed with — they may have different priorities.
 
+**Default-skip pillars grading B or above.** Don't polish what's already polished. Recommend SKIP for those phases unless the user has a specific reason to dig in. Pillars grading C or below are the ones worth your attention.
+
+### 1.10 Pick an Output Mode
+
+Before proceeding to any change-making phase, ask the user which output mode this run should use:
+
+- **`commit`** — Make changes directly and commit them (active development on a repo you're working in)
+- **`issues`** — File a GitHub issue for each finding via `gh`, no code changes (hobby projects, "I'll get to it eventually")
+- **`plan-only`** — Markdown report only, no commits, no issues (audit-only)
+
+**Default to `issues` for repos with zero open issues** (signals a hobby/dormant project that benefits from a tracked backlog over a flurry of commits). **Default to `commit` otherwise.** Always confirm before proceeding.
+
 ---
 
 ## Phase 2: ARCHITECT
+
+> **Cost gate:** What breaks if you don't extract a pure core? If business logic isn't tangled with I/O, or the tangle isn't causing pain, skip this phase.
+
+### When to Skip This Phase
+
+Hexagonal architecture is a tool, not a goal. Default-skip Phase 2 when:
+
+- The project is under ~500 LOC and the I/O layer **is** the product (Cloudflare Workers, MCP servers, glue scripts, small CLIs, single-page apps that are mostly glue)
+- The Architecture grade from Phase 1 came back B or above
+- There's no business logic of substance to isolate from delivery
+
+Apply Phase 2 when business logic is genuinely tangled with I/O **and** the tangle is causing observable pain (hard to test, hard to change, hard to reason about).
 
 Extract a pure, testable core. This is the most important phase — it enables everything else.
 
@@ -179,7 +209,7 @@ Every project has domain logic that is independent of how it's delivered:
 ### 2.2 Extract the Core
 
 Refactor so the core module(s):
-- Have **ZERO imports** from frameworks, I/O libraries, or delivery mechanisms
+- **Minimize framework coupling** in business logic — pure functions where practical, but don't contort the code to eliminate every import. The goal is testability and reasoning clarity, not dogmatic isolation.
 - Use the language's type system to make invalid states unrepresentable where possible
 - Prefer **immutable data structures** for state (frozen dataclasses, readonly records, const structs, etc.)
 - Expose **pure functions** that take inputs and return outputs without side effects
@@ -231,6 +261,8 @@ Define storage interface for dependency inversion
 ---
 
 ## Phase 3: TEST
+
+> **Cost gate:** What breaks if you don't test more? If the existing test suite is already catching real bugs and the project doesn't ship to others, the marginal value of more tests may be low.
 
 Write tests as an executable specification of the system's behavior.
 
@@ -313,6 +345,8 @@ Mark slow tests for CI separation
 
 ## Phase 4: ENRICH
 
+> **Cost gate:** What does the project lack that's actually causing pain? If nothing's missing or broken, skip this phase — don't invent work.
+
 This phase is about improving the project's OWN goals — not adding prescribed features. The architecture and test foundation from Phases 2-3 makes this safe and fast.
 
 ### 4.1 Assess What the Project Needs
@@ -347,7 +381,9 @@ Every commit should:
 
 ## Phase 5: HARDEN
 
-The final pass makes everything production-quality. Apply the universal hardening first, then the type-specific checklist.
+> **Cost gate:** What kind of failure are you actually preventing? Hardening that doesn't map to a real threat or failure mode is busywork. Skip pillars where the audit grade was already B or above.
+
+The final pass makes everything production-fit. Apply the universal hardening first, then the type-specific checklist.
 
 ### 5.1 Security Hardening (All Projects)
 
@@ -474,7 +510,9 @@ If the project writes files (config, state, output), ensure writes are atomic: w
 
 ### 5.5 Type-Specific Hardening
 
-Apply the relevant checklist(s) based on the project classification from Phase 1:
+Apply the relevant checklist(s) based on the project classification from Phase 1.
+
+**Pick the 3-5 highest-value items per checklist — do not run the whole list.** A 200-line CLI doesn't need every item ticked; a public-facing API may need most. Match what you check against to what would actually break, leak, or embarrass if you didn't.
 
 #### For Libraries/Packages
 
@@ -634,7 +672,7 @@ Before declaring a codebase "perfect," verify all of these:
 - **Test before committing.** Run the test suite after every change.
 - **One commit per logical change.** Never bundle unrelated changes.
 - **Phase order matters.** Architecture enables testing. Testing enables safe enrichment. Enrichment is hardened last.
-- **Ask before large changes.** If a phase would touch >10 files, present the plan first.
+- **Hard scope cap: 10 file changes per session.** When you reach 10 modified files, STOP and re-confirm with the user before continuing. This is a hard stop, not a soft suggestion — perfectify runs have a tendency to balloon, and this cap prevents it.
 - **Adapt to the language.** The principles are universal; the patterns are language-specific. Use frozen dataclasses in Python, readonly records in C#, const structs in Go, etc. Use pyproject.toml for Python, package.json for Node, Cargo.toml for Rust, etc.
 - **Adapt to the project type.** A 200-line CLI script needs less ceremony than a multi-service application. Scale the rigor to the project's size and purpose. A tiny project might skip the orchestration layer. A massive one might need multiple.
 - **Don't add what isn't needed.** Perfectifying means making what exists excellent, not bolting on features the project doesn't need. A CLI tool doesn't need accessibility auditing. A library doesn't need a Makefile `play` target. Read the project, understand its purpose, and improve what matters.
