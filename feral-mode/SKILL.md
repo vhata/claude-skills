@@ -30,12 +30,14 @@ Do **not** activate from generic phrases like "keep going", "continue", or "next
 
 ### 1. Two-Way Doors Only
 
-Freely allowed (reversible):
+Freely allowed (reversible — and *encouraged*; commits on a feature branch are how the user reviews your work alongside `AUDIT.md`):
 - Create branches, make local commits, edit/create/delete files in the working tree
 - Run tests, type checks, builds, formatters, linters
 - Spawn worktrees, dispatch agents
 - Add or remove dependencies on a feature branch
 - Refactor, restructure, scaffold
+
+A local commit is a two-way door. `git push` is the one-way door. Don't conflate them — leaving a working tree full of unstaged changes for the user to sort through is *worse* than committing, not safer.
 
 **Never without an explicit user OK** (one-way doors):
 - `git push` to any remote (including new branches), `git push --force`
@@ -151,6 +153,7 @@ If any of these thoughts surface, **stop**:
 - **Skipping "Undo by" because it's obvious.** It is never obvious in two weeks. Always specify.
 - **Fanning out work that shares state.** Two agents touching the same module = merge hell.
 - **Treating "carry on" as license to push.** Carry on means *keep working*, not *publish*.
+- **Leaving work uncommitted at end-of-run.** A working tree of unstaged changes is harder to review than a sequence of themed commits on a feature branch. Commit early, commit often, push never — local commits are the reversible review surface, not the dangerous one. The asymmetry is: pushing to a remote is one-way, committing to a local branch is two-way (`git reset --soft HEAD~N` or `git revert <sha>` undoes it without losing the working tree).
 - **Trying to clear all blockers before reporting.** If blocked, log and stop; don't dig.
 
 ## Cross-References
