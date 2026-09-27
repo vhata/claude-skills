@@ -85,8 +85,8 @@ Use absolute timestamps (not "today" or "just now"). The "Undo by" line must be 
 
 When work splits into 2+ independent threads with no shared state, dispatch parallel agents in worktrees rather than working sequentially.
 
-- **REQUIRED SUB-SKILL:** `superpowers:using-git-worktrees` for worktree creation
-- **REQUIRED SUB-SKILL:** `superpowers:dispatching-parallel-agents` for agent dispatch
+- Use `superpowers:using-git-worktrees` for worktree creation.
+- Use `superpowers:dispatching-parallel-agents` for agent dispatch.
 
 Branch naming: `feral/<short-topic>`. Each worktree gets one task; do not fan out across work that touches the same files or shares state — that creates merge hell.
 
@@ -148,11 +148,8 @@ If any of these thoughts surface, **stop**:
 
 ## Common Mistakes
 
-- **Batched logging.** Entries written hours after the decision lose the reasoning. Log in real time.
 - **Logging trivia.** Don't audit variable renames or comment fixes. Reserve for decisions worth review.
 - **Skipping "Undo by" because it's obvious.** It is never obvious in two weeks. Always specify.
-- **Fanning out work that shares state.** Two agents touching the same module = merge hell.
-- **Treating "carry on" as license to push.** Carry on means *keep working*, not *publish*.
 - **Leaving work uncommitted at end-of-run.** A working tree of unstaged changes is harder to review than a sequence of themed commits on a feature branch. Commit early, commit often, push never — local commits are the reversible review surface, not the dangerous one. The asymmetry is: pushing to a remote is one-way, committing to a local branch is two-way (`git reset --soft HEAD~N` or `git revert <sha>` undoes it without losing the working tree).
 - **Trying to clear all blockers before reporting.** If blocked, log and stop; don't dig.
 
