@@ -73,24 +73,9 @@ cli-anything-iterm2 session send "python3 -m http.server 8000"
 cli-anything-iterm2 session set-var user.role "http-server"
 ```
 
-## Reference Files
+## Command Help
 
-Read only what the task requires — each file is a single narrow concern (~10–30 lines):
-
-| File | Read when you need... |
-|------|-----------------------|
-| `references/session-io.md` | Send text, inject bytes, read screen/scrollback, get selection |
-| `references/session-control.md` | Split panes, activate/close sessions, resize, rename, session variables |
-| `references/session-shell-integration.md` | wait-prompt, wait-command-end, get-prompt; reliable send→wait→read pattern |
-| `references/layout-window-tab.md` | Create/close/resize windows and tabs, navigate split panes |
-| `references/layout-arrangement.md` | Save and restore window layouts |
-| `references/app-context.md` | **Snapshot** (orientation), status, context management, app vars, modal dialogs, file panels |
-| `references/profile-pref.md` | Profiles list/get/presets, preferences read/write, tmux pref shortcuts |
-| `references/broadcast-menu.md` | Broadcast keystrokes to multiple panes, invoke menu items |
-| `references/tmux-commands.md` | All tmux CLI commands (bootstrap, send, tabs, create-window, set-visible) |
-| `references/tmux-guide.md` | Full tmux -CC workflow, pane→session ID mapping |
-| `references/json-session.md` | `--json` schemas for session, window, tab, screen, scrollback, inject |
-| `references/json-tmux-app.md` | `--json` schemas for tmux, app dialogs, preferences, errors |
+Run `cli-anything-iterm2 <group> --help` or `cli-anything-iterm2 <group> <command> --help` for exact options, and add `--json` to see response shapes.
 
 ## REPL Mode
 
