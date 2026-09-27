@@ -31,11 +31,14 @@ Do **not** activate from generic phrases like "keep going", "continue", or "next
 ### 1. Two-Way Doors Only
 
 Freely allowed (reversible — and *encouraged*; commits on a feature branch are how the user reviews your work alongside `AUDIT.md`):
-- Create branches, make local commits, edit/create/delete files in the working tree
+- Create branches, make local commits
+- Edit or delete files that are tracked in git, and create new files. A file you created this session can be edited or deleted freely until its final form is committed; commit it once it has settled
 - Run tests, type checks, builds, formatters, linters
 - Spawn worktrees, dispatch agents
 - Add or remove dependencies on a feature branch
 - Refactor, restructure, scaffold
+
+Only git makes a working-tree change reversible. An untracked file you didn't create, or uncommitted changes to a tracked file, can't be recovered through git, so leave them alone; if the work needs them changed, log it as blocked.
 
 A local commit is a two-way door. `git push` is the one-way door. Don't conflate them — leaving a working tree full of unstaged changes for the user to sort through is *worse* than committing, not safer.
 
@@ -122,7 +125,9 @@ The audit doc has the detail; this summary is the index.
 | Create branch, push to remote | ❌ — needs permission |
 | Add npm/pip dep on a branch | ✅ |
 | Modify shared CI config | ❌ — needs permission |
-| `rm` files in the working tree | ✅ (recoverable via git) |
+| Edit or `rm` a tracked file with no uncommitted changes | ✅ (recoverable via git) |
+| Edit or `rm` a file created this session | ✅ (commit its final form) |
+| Edit or `rm` an untracked file you didn't create, or discard uncommitted changes | ❌ — not recoverable |
 | `git push --force` (any branch) | ❌ — never without explicit ask |
 | Spawn worktree + agent | ✅ |
 | DB migration on local SQLite | ✅ |
