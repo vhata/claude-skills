@@ -70,7 +70,7 @@ Autonomy grants cover implementation. These need the user's word in the current 
 | Push a branch, open a draft PR | Interactive sessions: normal, no ask. Unattended autonomy grants: only with the user's word; otherwise branches stay local (see below) |
 | Mark a PR ready | No, once checks and independent review are complete |
 | Merge into main | Yes, in that turn, unless the user delegated it for the session or `AGENTS.md` records a standing delegation |
-| Force-push | Only the PR branch, only `--force-with-lease`, only after a rebase. Never main. |
+| Force-push | Only the PR branch, only `--force-with-lease`, only after a rebase. Never main, even where GitHub allows it; that ability is the owner's, for recovery. |
 | Release tag, deploy, publish | Yes, in that turn or the one before, even under "go wild" |
 | Change CI, branch protection, hooks policy | Yes |
 | Delete a branch with unmerged commits, remove a dirty worktree | Yes |
