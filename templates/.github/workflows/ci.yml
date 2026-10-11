@@ -1,0 +1,81 @@
+# Merge-blocking checks. Every job calls a script in scripts/ or
+# docket/scripts/, so `bash scripts/check.sh && bash scripts/build.sh`
+# reproduces the check job locally and `bash docket/scripts/ci.sh` the
+# workflow job. See docs/QUALITY.md.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+defaults:
+  run:
+    shell: bash   # explicit bash gives `-eo pipefail`
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # Cancel superseded runs on PR branches only. Cancelling runs on main hides
+  # red builds when several PRs merge in quick succession.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      # <Replace with the language's setup: pinned toolchain read from a file in the repo, dependency cache, lockfile-exact install.>
+      - run: bash scripts/setup.sh
+      - run: bash scripts/check.sh
+      # <Remove if the project has no build step.>
+      - run: bash scripts/build.sh
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: check-failure-evidence
+          path: |
+            test-results/
+            coverage*
+          if-no-files-found: ignore
+          retention-days: 7
+
+  e2e:
+    # <Remove if the project has no browser or system suite; or rename to smoke for a headless run.>
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/setup.sh
+      - run: bash scripts/e2e.sh
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-failure-evidence
+          path: |
+            test-results/
+            browser-evidence/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  workflow:
+    name: Queue and PR hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Queue hygiene, Markdown links and, on pull requests, the PR markers.
+      # The PR variables are empty on push events and ci.sh then skips the
+      # marker check.
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE: ${{ github.event.pull_request.base.ref }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: bash docket/scripts/ci.sh
