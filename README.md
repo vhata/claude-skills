@@ -1,4 +1,8 @@
+<img src="assets/docket.svg" alt="Docket ledger icon" width="80" height="80">
+
 # docket
+
+**A shared plan for coding agents.**
 
 An agent skill for running a project with many coding agents working on it at once, without them tripping over each other. A docket is the list of work to be heard and the record of what happened to each item; this one keeps that list for a software project.
 
@@ -76,6 +80,7 @@ bash docket/scripts/check-queues.sh --strict      # validate TODO.md and review/
 bash docket/scripts/claim-check.sh <slug>         # who already claims this entry?
 bash docket/scripts/start-work.sh <queue> <slug>  # branch + worktree for a task
 bash docket/scripts/check-pr-markers.sh --pr N    # validate Claims/Resolves markers on a PR
+bash docket/scripts/pr-labels.sh --pr N --apply   # label a PR by type, queue, area and priority
 bash docket/scripts/review-due.sh                 # is a review due?
 bash docket/scripts/cleanup-landed.sh --apply     # remove worktrees and branches for merged PRs
 bash docket/scripts/check-links.sh                # relative Markdown links resolve
