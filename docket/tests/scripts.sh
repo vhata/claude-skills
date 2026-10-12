@@ -19,7 +19,8 @@ if git -C "$root" rev-parse --git-dir >/dev/null 2>&1; then
   [ -z "$modes" ] || { echo "scripts-test: not committed as executable: $modes" >&2; exit 1; }
 fi
 fixture="$(mktemp -d)"
-trap 'rm -rf "$fixture"' EXIT
+external="$(mktemp -d)"
+trap 'rm -rf "$fixture" "$external"' EXIT
 mkdir -p "$fixture/docket/scripts" "$fixture/review" "$fixture/bin"
 cp "$scripts"/*.sh "$fixture/docket/scripts/"
 cp "$root/templates/.github/pull_request_template.md" "$fixture/template.md"
@@ -176,6 +177,86 @@ grep -Fq 'Type: <kind>' "$fixture/result.log" && { echo 'scripts-test: the type 
 printf '## Why\n\nInline.\n\n```inline``` code at the start of a line\n\nType: fix\n' > body.md
 pass 'inline triple backticks' bash "$markers" --body body.md --base "$base" --head "$base" --branch task/direct
 grep -Fq 'Type: <kind>' "$fixture/result.log" && { echo 'scripts-test: inline triple backticks opened a fence' >&2; exit 1; }
+
+# Line length: the body becomes the squash commit message, so prose lines
+# over 72 characters warn, and --strict turns every warning into an error.
+cat > body.md <<'BODY'
+## Why
+
+This description was hard-wrapped at seventy-eight columns, which is too wide.
+
+Type: docs
+BODY
+pass 'wide body' bash "$markers" --body body.md --base "$base" --head "$base" --branch task/direct
+expect 'wide body was not warned' 'warning: 1 line longer than 72 characters (line 3: 78)'
+reject 'wide body under --strict' 'error: 1 line longer than 72 characters' bash "$markers" --body body.md --base "$base" --head "$base" --branch task/direct --strict
+printf '## Why\n\nNo type.\n' > body.md
+reject 'missing type line under --strict' 'error: no "Type: <kind>" line' bash "$markers" --body body.md --base "$base" --head "$base" --branch task/direct --strict
+# Fenced code, comments, tables and unbreakable tokens are exempt, a wrapped
+# list item keeps its indentation, and width counts characters, not bytes.
+cat > body.md <<'BODY'
+## Why
+
+Width is counted in characters — this line has 72 of them, “not” octets.
+
+- A list item whose continuation line stays indented under the marker so
+  that it renders as one item; the long link sits on a line of its own:
+  https://example.com/a/very/long/path/that/cannot/be/broken/across/lines
+- [ ] [docs](https://example.com/another/very/long/path/that/cannot/be/split)
+
+[ref]: https://example.com/a/reference/definition/that/cannot/be/broken/up
+
+| Column | A table row is exempt because a row cannot be broken across lines |
+| --- | --- |
+
+<!-- A template hint left in a comment is not checked, however long it is. -->
+
+```
+A fenced code block keeps its lines as they are, however long the lines are.
+```
+
+Type: docs
+BODY
+pass 'exempt long lines' bash "$markers" --body body.md --base "$base" --head "$base" --branch task/direct --strict
+cat > body.md <<'BODY'
+## Why
+
+- A list item that puts its link on the same line as prose: https://example.com/x
+> A quoted line that runs past the limit is prose and can be wrapped like it.
+
+Type: docs
+BODY
+pass 'breakable long lines' bash "$markers" --body body.md --base "$base" --head "$base" --branch task/direct
+expect 'breakable long lines were not warned' 'warning: 2 lines longer than 72 characters (line 3: 81, line 4: 77)'
+# The boundary, trailing whitespace, a long marker line and tables written
+# without leading pipes; a prose line with a pipe is not a table.
+cat > body.md <<'BODY'
+## Why
+
+Seventy-three characters is one too many for the lines of a commit's body
+This line has seventy-two characters, and ends with two trailing blanks.  
+
+Claims roadmap: a-roadmap-theme-whose-slug-is-long-enough-to-pass-the-limit
+
+Column A | Column B, a table written without the leading pipes that is long
+--- | ---
+first | a body row in that table, also written without leading pipes at all
+
+A prose line that mentions a | pipe character but is not a table, and runs on.
+
+Type: docs
+BODY
+pass 'boundary and tables' bash "$markers" --body body.md --base "$base" --head "$base" --branch task/direct
+expect 'boundary and tables were not warned as expected' 'warning: 2 lines longer than 72 characters (line 3: 73, line 12: 78)'
+# A markerless body that fails only on length does not blame its markers.
+printf '## Why
+
+This description was hard-wrapped at seventy-eight columns, which is too wide.
+
+Type: docs
+' > body.md
+reject 'wide body message' 'no work-tracking markers found' bash "$markers" --body body.md --base "$base" --head "$base" --branch task/direct --strict
+grep -Fq 'no well-formed markers' "$fixture/result.log" && { echo 'scripts-test: a wide body blamed its markers' >&2; exit 1; }
 
 # pr-labels.sh: labels from the branch, the type line and the claimed or
 # resolved entries, looked up at base and then at head.
@@ -410,6 +491,19 @@ wt="$fixture/.worktrees/todo-fixture-self-task"
 pass 'start-work on a free slug' env PATH="$nogh" bash docket/scripts/start-work.sh todo fixture-self-task --base main
 [ -d "$wt" ] || { echo 'scripts-test: start-work created no worktree' >&2; exit 1; }
 reject 'start-work on a claimed slug' 'existing claim' env PATH="$nogh" bash docket/scripts/start-work.sh fix fixture-self-task --base main
+# A --dir outside the repository cannot be ignored by it: start-work must leave
+# the exclude file alone and print no .gitignore advice, however often it runs.
+cp .git/info/exclude "$fixture/exclude.before"
+for n in one two; do
+  pass "start-work with an external --dir ($n)" env PATH="$nogh" bash docket/scripts/start-work.sh todo "fixture-external-$n" --base main --dir "$external"
+  [ -d "$external/todo-fixture-external-$n" ] || { echo "scripts-test: start-work created no external worktree ($n)" >&2; exit 1; }
+  grep -Fq '.gitignore' "$fixture/result.log" && { echo "scripts-test: start-work gave .gitignore advice for an external --dir ($n)" >&2; cat "$fixture/result.log" >&2; exit 1; }
+done
+cmp -s .git/info/exclude "$fixture/exclude.before" || { echo 'scripts-test: start-work changed the exclude file for an external --dir' >&2; diff "$fixture/exclude.before" .git/info/exclude >&2; exit 1; }
+for n in one two; do
+  git worktree remove --force "$external/todo-fixture-external-$n"
+  git branch --quiet -D "todo/fixture-external-$n"
+done
 git -C "$wt" commit --quiet --allow-empty -m 'Own fixture work'
 own_sha="$(git -C "$wt" rev-parse HEAD)"
 foreign_sha="$(git commit-tree -p main -m 'Another worker' "$(git rev-parse 'main^{tree}')")"
