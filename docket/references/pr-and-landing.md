@@ -6,13 +6,29 @@ PRs are squash-merged with the title as subject and the body as commit body, so 
 
 1. `## Why`: the unmet need, bug or risk and the outcome it produces, readable without opening a queue or a conversation. For a feature, the need and the capability; for a bug, the old behaviour and why it was wrong; for internal work, the concrete cost removed.
 2. `## What changed`: behaviour and structure, not a file list.
-3. Markers, one per line (see queues.md).
+3. The `Type:` line, then the queue markers, one per line (see queues.md and [Labels](#labels)).
 4. `## Validation`: exact commands run and their results; for behaviour changes a reproducible scenario with before and after; for review-finding fixes a human-runnable scenario (setup, actions, old failure, expected result); what was not checked (GUI appearance, production state) and why.
 5. `## Review`: independent reviewer, commit reviewed, verdict, verified claims, findings and dispositions (see parallel-work.md).
 
 The body is timeless: it describes the change as it will read in `git log` years later, so nothing in it refers to the state of the review (stacking, merge order, what is still to do, other open PRs). That goes in a PR comment or the coordinator's report. Never merge with a one-line body. One PR does one thing; several commits inside it are fine because the squash folds them. After an agent-performed merge, confirm the resulting commit body is the full PR body and not just the subject (one commit on record has its body pasted twice; another has only the title).
 
 Template: `templates/.github/pull_request_template.md`. Keep the template's headings even when the sections are short; later PRs in two repositories dropped the template entirely and the marker and validation lines became hard to find.
+
+## Labels
+
+The author knows what kind of change a PR is and which queue entry it serves; the branch name and the markers record some of that, but only in a form a reader has to parse. Labels make it queryable by GitHub search, dashboards and anything else that reads the forge's API. The body records the change type as one line, `Type: <kind>`, with the kind one of `feature`, `fix`, `refactor`, `perf`, `docs`, `test`, `tooling` (scripts, CI, hooks, dependencies) or `review` (codebase review snapshots). Being in the body, it also lands in the squash commit, so the history keeps it after the forge is gone.
+
+`bash docket/scripts/pr-labels.sh --pr <number> --apply` derives every label from the branch, the body and the queue files, so none is chosen by hand:
+
+| Label | Source |
+| --- | --- |
+| `docket` | Every PR made under Docket. |
+| `type:<kind>` | The `Type:` line; a `fix/` branch without one is `type:fix`. |
+| `queue:todo`, `queue:review`, `queue:roadmap` | Each queue the markers claim or resolve work in, and the queue a `todo/`, `review/` or `roadmap/` branch names. No queue label means directly requested work. |
+| `area:<area>` | The `[AREA]` of each claimed or resolved entry, lowercased. |
+| `priority:p0` to `priority:p3` | The highest priority section among those entries; Unprioritized adds none. |
+
+Run it once the PR is open and again after changing the `Type:` line or the markers; it creates missing labels in the repository without restyling existing ones, adds what applies and removes labels of these forms that no longer do, and leaves every other label alone. Without `--apply` (with `--body <file>` for an unpublished body) it only prints the labels. `check-pr-markers.sh` warns when the `Type:` line is missing and fails a malformed or repeated one. Draft state, base branch, review state and checks are already on the PR itself, so no label duplicates them.
 
 ## Draft, ready, merge
 
@@ -23,12 +39,12 @@ Template: `templates/.github/pull_request_template.md`. Keep the template's head
 
 ### Direct to main
 
-Two kinds of change go straight to `main` without a branch, a PR or a review:
+Two kinds of change may go straight to `main` without a branch, a PR or a review:
 
-1. **Documentation that records work to be done** rather than describing behaviour: adding, triaging or splitting entries in `TODO.md` or `review/BACKLOG.md`, and plans (dated files under `plans/`). A plan is planning for work, not work; everything it describes still goes through branches, PRs and independent review. Resolving an entry is not in this exception, because resolution happens in the PR that does the work. A discovery entry committed this way takes no `Files TODO` marker in the PR that found it; that marker is for entries added on the branch.
+1. **Documentation that records work to be done** rather than describing behaviour: adding, triaging or splitting entries in `TODO.md` or `review/BACKLOG.md`, plans (dated files under `plans/`) and design specs (dated files under `docs/specs/`). Plans and specs are planning for work, not work; everything they describe still goes through branches, PRs and independent review. Going direct is an option, not a requirement: an entry, plan or spec drawn up in the middle of other work can be added in that work's PR instead, as long as the PR does not start doing what it records. Resolving an entry is not in this exception, because resolution happens in the PR that does the work. A discovery entry committed this way takes no `Files TODO` marker in the PR that found it; that marker is for entries added on the branch.
 2. **Housekeeping metadata files** such as `.git-blame-ignore-revs`, and only when the user says so for that case. It is a per-case allowance, not a standing rule.
 
-Cases that extrapolate from these without violating the spirit of the rule are a judgement call; state it in the commit message. Everything else goes through a PR: all code, anything CI or the build reads, and any documentation that describes behaviour or policy (decisions, features, architecture, quality, the contract itself). Run the proportionate check before committing (`bash docket/scripts/check-queues.sh` for queue edits, `bash docket/scripts/check-links.sh` for plans). Pushing the direct commit follows the session's push authority like any other push: normal in an interactive session, held for the user under an unattended autonomy grant. Branch protection has to permit this (administrator bypass or no required-PR rule), which is why admin enforcement stays off in repositories that use it.
+Cases that extrapolate from these without violating the spirit of the rule are a judgement call; state it in the commit message. Everything else goes through a PR: all code, anything CI or the build reads, and any documentation that describes behaviour as built or policy (decisions, features, architecture, quality, the contract itself). Run the proportionate check before committing (`bash docket/scripts/check-queues.sh` for queue edits, `bash docket/scripts/check-links.sh` for plans and specs). Pushing the direct commit follows the session's push authority like any other push: normal in an interactive session, held for the user under an unattended autonomy grant. Branch protection has to permit this (administrator bypass or no required-PR rule), which is why admin enforcement stays off in repositories that use it.
 
 ## Keeping branches current
 
