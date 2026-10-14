@@ -31,7 +31,7 @@ Also check what lives outside the repository: harness memory files and the user'
 | Review ledger | `review/README.md`, `review/BACKLOG.md`, `review/<timestamp>-<type>.md`, `docket/CODE_REVIEW_GUIDE.md`; project review inputs in `docs/QUALITY.md` | Snapshots, inventory, promoted work, closure rules. |
 | Quality | `docs/QUALITY.md`, `scripts/*.sh`, `docket/scripts/ci.sh`, hook config (no template; see quality-gates.md), `.github/workflows/ci.yml`, `.github/workflows/main-validation.yml` | What runs where, current state only. |
 | PR shape | `.github/pull_request_template.md` | Why, what changed, the `Type:` line and markers, validation, review. |
-| Audit (unattended runs) | `.docket/AUDIT.md` and `.docket/pr-<slug>.md`; the installer adds `.docket/` to `.git/info/exclude` and the install PR adds it to `.gitignore` (step 3) | Append-only decisions with undo lines; prepared PR bodies. |
+| Audit (unattended runs) | `.docket/AUDIT.md`, `.docket/pr-<slug>.md` and `.docket/review-<slug>.md`; the installer adds `.docket/` to `.git/info/exclude` and the install PR adds it to `.gitignore` (step 3) | Append-only decisions with undo lines; prepared PR bodies and review comments. |
 | Plans | `plans/YYYY-MM-DD-<slug>.md` | Dated plans for work; may be committed direct to main (see pr-and-landing.md). |
 | Design specs | `docs/specs/YYYY-MM-DD-<slug>.md` | Dated designs written ahead of the work; may be committed direct to main (see pr-and-landing.md). |
 
@@ -41,7 +41,7 @@ Every file in this table has a template under `templates/`, with placeholders in
 
 Nothing under `docket/` is edited in a project; it is byte-identical to the skill's `templates/docket/` and is resynced with one command. The Docket section of `AGENTS.md`, between `<!-- docket:begin -->` and `<!-- docket:end -->`, is the installer's too: its text is rewritten from `templates/AGENTS.md` on every run and its settings bullets are kept by name, so only the values are edited there. Project rule text goes in the Docket section of `AGENTS.md` (settings) or in `docs/QUALITY.md` (what quality means here, review inputs), which the vendored guides point to. `bash ~/.claude/skills/docket/install.sh --check` is the audit and `bash ~/.claude/skills/docket/install.sh` is the repair; `docket/VERSION` records which skill commit is installed. Both compare against the skill checkout they run from, so run them from a checkout at or beyond that commit: when the installed commit is a descendant of the checkout's skill commit (`HEAD` in a clone, the subtree's upstream commit in a subtree host; see [Installing the skill](../README.md#installing-the-skill)), `--check` prints "the installed copy (<sha>) is newer than this skill checkout (<head>); update the skill checkout before resyncing" and exits 1 without a file diff, so a project that was resynced from a newer checkout is not misreported as drifted. When the installed commit is unknown to the checkout the installer says so and still diffs; when the files match but `VERSION` is behind that commit it prints an informational line and exits 0.
 
-The skill's own repository vendors its `docket/` the same way, with `bash install.sh --self` from the checkout root; the installer refuses its own repository without that flag. There `docket/VERSION` is the fixed line `self`, since `templates/docket/` at the same commit is the source and a sha would change on every branch, and its CI runs `bash install.sh --self --check`, which skips the commit comparison but fails whenever `docket/` or the Docket section of `AGENTS.md` lags `templates/`.
+The skill's own repository vendors its `docket/` the same way, with `bash install.sh --self` from the checkout root; the installer refuses its own repository without that flag, and refuses any other checkout of the skill outright, so the copy in `~/.claude/skills/docket/` run against a development clone stops before it overwrites `docket/` there. A repository whose `docket/` is itself the skill, such as `~/.claude/skills` holding it under that prefix, is refused for the same reason. There `docket/VERSION` is the fixed line `self`, since `templates/docket/` at the same commit is the source and a sha would change on every branch, and its CI runs `bash install.sh --self --check`, which skips the commit comparison but fails whenever `docket/` or the Docket section of `AGENTS.md` lags `templates/`.
 
 ## 3. Install order
 
@@ -87,7 +87,7 @@ Symptoms and the fix, from the studied repositories:
 | A formatting hook rewrites `docket/` or the Docket section | Exclude `docket/` from the formatter; resync to restore the files |
 | Quality doc describes a past state | Rewrite as current state; move history to decisions |
 | Red main nobody noticed | Concurrency fix for main pushes; red-main policy; badge for the scheduled run |
-| Zero review records on the forge | `## Review` section in every code PR body |
+| Zero review records on the forge | A review comment on every code PR |
 
 ### Migrating from the hand-copied layout
 
