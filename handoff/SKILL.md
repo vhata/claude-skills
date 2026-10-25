@@ -27,7 +27,7 @@ Use judgment — these are quality filters, not hard gates. The goal is to keep 
 
 ### 2. Write the Entry
 
-Write a markdown file with an appropriate name for this session. The files will live in ~/.claude/handoff/
+Write a markdown file with an appropriate name for this session. The files will live in ~/.agents/handoff/
 Confirm the name with the user, and allow them to modify it if they want to.
 
 Use this exact format:
@@ -52,11 +52,11 @@ This is the most important step. Session logs capture _what happened_, but insti
 
 | Target          | When to promote                                                                                   | File(s)                            |
 | --------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| **Skill**       | Domain knowledge was gained, a decision tree needs a new branch, or a lookup table needs updating | `~/.claude/skills/*/SKILL.md`      |
-| **Agent**       | An agent needs new instructions, a better prompt, or a new agent would be useful                  | `~/.claude/agents/*.md`            |
+| **Skill**       | Domain knowledge was gained, a decision tree needs a new branch, or a lookup table needs updating | `~/.agents/skills/*/SKILL.md`      |
+| **Agent**       | An agent needs new instructions, a better prompt, or a new agent would be useful                  | `~/.agents/agents/*.md`            |
 | **CLAUDE.md**   | A system-level convention changed, a new trigger was identified, or structural changes are needed | `CLAUDE.md`                        |
-| **Decisions**   | A cross-cutting decision was made that should be recorded for future reference                    | `~/.claude/handoff/decisions.md`   |
-| **Corrections** | A behavioral fix has no better home yet — use as a staging area, not a permanent destination      | `~/.claude/handoff/corrections.md` |
+| **Decisions**   | A cross-cutting decision was made that should be recorded for future reference                    | `~/.agents/handoff/decisions.md`   |
+| **Corrections** | A behavioral fix has no better home yet — use as a staging area, not a permanent destination      | `~/.agents/handoff/corrections.md` |
 
 **How to promote:**
 
@@ -79,7 +79,7 @@ For stable-facts, session logs, project CONTEXTs, decisions.md, and corrections.
 
 Report in this order so a bad change is easy to catch:
 
-- **High-blast edits (flag prominently if present):** any edits to `.claude/skills/`, `.claude/agents/`, or `CLAUDE.md`. These load into every future session — if the user disagrees, they'll want to revert immediately.
+- **High-blast edits (flag prominently if present):** any edits to `.agents/skills/`, `.agents/agents/`, or `CLAUDE.md`. These load into every future session — if the user disagrees, they'll want to revert immediately.
 - **Corrections:** entries added, entries retired (baked in elsewhere).
 - **Project CONTEXT / decisions.md:** what was changed.
 

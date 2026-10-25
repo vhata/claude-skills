@@ -15,11 +15,11 @@ $ARGUMENTS
 
 ### 1. Load Corrections
 
-Read `~/.claude/handoff/corrections.md` in full. Apply these corrections for the rest of the conversation. Do not summarize them back to the user unless asked — just internalize them.
+Read `~/.agents/handoff/corrections.md` in full. Apply these corrections for the rest of the conversation. Do not summarize them back to the user unless asked — just internalize them.
 
 ### 2. Load the Handoff document
 
-Ask the user for the name of the handoff document they wish to resume from. Handoff documents are markdown files in `~/.claude/handoff/`
+Ask the user for the name of the handoff document they wish to resume from. Handoff documents are markdown files in `~/.agents/handoff/`
 
 Once you have found the appropriate handoff document, read it so you get the full context of what happened in the previous session, and where you need to continue from.
 
